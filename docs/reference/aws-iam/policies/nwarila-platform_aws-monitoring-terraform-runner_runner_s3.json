@@ -1,0 +1,64 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::<account-id>-terraform/nwarila-platform/aws-monitoring-terraform-runner/terraform.tfstate",
+        "arn:aws:s3:::<account-id>-terraform/nwarila-platform/aws-monitoring-terraform-runner/terraform.tfstate.tflock"
+      ],
+      "Sid": "ReadWriteOnlyTheStateFileAndItsLock"
+    },
+    {
+      "Action": "s3:ListBucket",
+      "Condition": {
+        "StringEquals": {
+          "s3:prefix": [
+            "nwarila-platform/aws-monitoring-terraform-runner/terraform.tfstate",
+            "nwarila-platform/aws-monitoring-terraform-runner/terraform.tfstate.tflock"
+          ]
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:s3:::<account-id>-terraform",
+      "Sid": "ListOnlyThoseTwoKeys"
+    },
+    {
+      "Action": [
+        "s3:CreateBucket",
+        "s3:DeleteBucketPolicy",
+        "s3:GetAccelerateConfiguration",
+        "s3:GetBucketAcl",
+        "s3:GetBucketCORS",
+        "s3:GetBucketLocation",
+        "s3:GetBucketLogging",
+        "s3:GetBucketObjectLockConfiguration",
+        "s3:GetBucketOwnershipControls",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketRequestPayment",
+        "s3:GetBucketTagging",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketWebsite",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetLifecycleConfiguration",
+        "s3:GetReplicationConfiguration",
+        "s3:ListBucket",
+        "s3:PutBucketOwnershipControls",
+        "s3:PutBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketTagging",
+        "s3:PutEncryptionConfiguration",
+        "s3:PutLifecycleConfiguration"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:s3:::<account-id>-cloudtrail",
+      "Sid": "OwnOnlyTheTrailLogBucket"
+    }
+  ],
+  "Version": "2012-10-17"
+}

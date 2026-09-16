@@ -1,0 +1,25 @@
+{
+  "Statement": [
+    {
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:job_workflow_ref": "nwarila-platform/aws-monitoring-terraform-runner/.github/workflows/aws-deploy.yaml@refs/heads/main",
+          "token.actions.githubusercontent.com:ref": "refs/heads/main",
+          "token.actions.githubusercontent.com:repository_id": "<repository-id>",
+          "token.actions.githubusercontent.com:sub": [
+            "repo:nwarila-platform@230745524/aws-monitoring-terraform-runner@<repository-id>:ref:refs/heads/main",
+            "repo:nwarila-platform/aws-monitoring-terraform-runner:ref:refs/heads/main"
+          ]
+        }
+      },
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<account-id>:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Sid": "GitHubActionsForAwsMonitoringTerraformRunnerDeployWorkflow"
+    }
+  ],
+  "Version": "2012-10-17"
+}

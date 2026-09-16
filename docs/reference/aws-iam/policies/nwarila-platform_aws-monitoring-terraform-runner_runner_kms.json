@@ -1,0 +1,74 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "kms:CreateKey",
+        "kms:TagResource"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "CreateOnlyAKeyTaggedAsThisRepositorys"
+    },
+    {
+      "Action": [
+        "kms:CancelKeyDeletion",
+        "kms:DescribeKey",
+        "kms:DisableKeyRotation",
+        "kms:EnableKeyRotation",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListResourceTags",
+        "kms:PutKeyPolicy",
+        "kms:ScheduleKeyDeletion",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:UpdateKeyDescription"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:kms:us-east-1:<account-id>:key/*",
+      "Sid": "ManageOnlyTheKeyTaggedAsThisRepositorys"
+    },
+    {
+      "Action": [
+        "kms:CreateAlias",
+        "kms:DeleteAlias",
+        "kms:UpdateAlias"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:kms:us-east-1:<account-id>:alias/security-change-alerts",
+      "Sid": "AliasOnlyTheOneName"
+    },
+    {
+      "Action": [
+        "kms:CreateAlias",
+        "kms:DeleteAlias",
+        "kms:UpdateAlias"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:kms:us-east-1:<account-id>:key/*",
+      "Sid": "AliasOnlyTheKeyTaggedAsThisRepositorys"
+    },
+    {
+      "Action": "kms:ListAliases",
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "ResolveTheAlias"
+    }
+  ],
+  "Version": "2012-10-17"
+}

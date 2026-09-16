@@ -1,0 +1,190 @@
+name: AWS Deploy
+
+# Applies the pinned aws-monitoring-terraform-framework commit, with this repository's values, to
+# the organization account. Every merge to main converges it; nothing outside main can reach AWS.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+# One state key, one deployment: never two applies at once, never cancel a live apply.
+concurrency:
+  group: aws-deploy-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  main-ref:
+    name: Protected main ref
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Refuse privileged execution outside protected main
+        env:
+          EXPECTED_REF: refs/heads/main
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF}" != "${EXPECTED_REF}" ]; then
+            echo "::error::AWS deploys run only from ${EXPECTED_REF}; got ${GITHUB_REF}."
+            exit 1
+          fi
+
+  aws-deploy:
+    name: Converge monitoring
+    needs: main-ref
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      id-token: write # required to mint the GitHub OIDC token the deploy role trusts
+      contents: read # required to check out this repository and the pinned framework
+    env:
+      AWS_REGION: us-east-1
+      DEPLOY_ROLE: nwarila-platform_aws-monitoring-terraform-runner_runner
+      FRAMEWORK: .frameworks/aws-monitoring-terraform-framework
+
+    steps:
+      - name: Check out runner
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      # actions/checkout cannot read a file into ref:, so the pin passes through a step output,
+      # validated as exactly one 40-character SHA before it can address anything.
+      - name: Read the framework pin
+        id: pin
+        run: |
+          set -euo pipefail
+          mapfile -t lines < .github/terraform-framework-pin
+          if [ "${#lines[@]}" -ne 1 ] || [[ ! "${lines[0]}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::.github/terraform-framework-pin must hold exactly one lowercase 40-character SHA."
+            exit 1
+          fi
+          echo "sha=${lines[0]}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check out aws-monitoring-terraform-framework (pinned)
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: ${{ github.repository_owner }}/aws-monitoring-terraform-framework
+          ref: ${{ steps.pin.outputs.sha }}
+          path: .frameworks/aws-monitoring-terraform-framework
+          persist-credentials: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ env.DEPLOY_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+          role-session-name: aws-deploy-${{ github.run_id }}
+          role-duration-seconds: 3600
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        with:
+          # renovate: datasource=github-releases depName=hashicorp/terraform extractVersion=^v(?<version>.*)$ versioning=hashicorp
+          terraform_version: "1.15.1"
+          terraform_wrapper: false
+
+      - name: Terraform init
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          cp terraform/prod.tfvars "${FRAMEWORK}/terraform/terraform.tfvars"
+          terraform -chdir="${FRAMEWORK}/terraform" init -input=false          \
+            -backend-config="bucket=${AWS_ACCOUNT_ID}-terraform"               \
+            -backend-config="key=${GITHUB_REPOSITORY}/terraform.tfstate"       \
+            -backend-config="region=${AWS_REGION}"
+
+      # Identity is passed as command-line -var so the value file cannot restate who deployed.
+      # CommitSha is this runner's checked-out commit, read back from git rather than github.sha.
+      - name: Terraform plan
+        run: |
+          set -euo pipefail
+          terraform -chdir="${FRAMEWORK}/terraform" plan -input=false -out=tfplan \
+            -var "commit_sha=$(git -C "${GITHUB_WORKSPACE}" rev-parse HEAD)"     \
+            -var "repository=${GITHUB_REPOSITORY}"                               \
+            -var "repository_id=${GITHUB_REPOSITORY_ID}"                         \
+            -var "run_id=${GITHUB_RUN_ID}"
+
+      # A plan that creates a trail must find an account with none; one that does not must find a
+      # covering trail already there. Both are decided before anything is applied.
+      - name: Verify the account's CloudTrail configuration
+        run: bash "${FRAMEWORK}/tools/check_cloudtrail.sh" --plan "${FRAMEWORK}/terraform/tfplan"
+
+      - name: Prove the planned event patterns against EventBridge
+        run: bash "${FRAMEWORK}/tools/check_event_patterns.sh" "${FRAMEWORK}/terraform/tfplan"
+
+      - name: Terraform apply
+        run: terraform -chdir="${FRAMEWORK}/terraform" apply -input=false tfplan
+
+      - name: Verify a logging trail now covers the region
+        run: bash "${FRAMEWORK}/tools/check_cloudtrail.sh"
+
+      # Terraform's own report is not the proof: read the rules, targets, topics, subscriptions and
+      # alarms back from AWS and fail on anything missing or miswired.
+      - name: Verify the deployed monitoring against AWS
+        env:
+          FRAMEWORK_SHA: ${{ steps.pin.outputs.sha }}
+        run: |
+          set -euo pipefail
+          tf() { terraform -chdir="${FRAMEWORK}/terraform" "$@"; }
+          topic_arn="$(tf output -raw alert_topic_arn)"
+          health_arn="$(tf output -raw health_topic_arn)"
+
+          key_id="$(aws sns get-topic-attributes --topic-arn "${topic_arn}" \
+            --query 'Attributes.KmsMasterKeyId' --output text)"
+          if [ -z "${key_id}" ] || [ "${key_id}" = "None" ]; then
+            echo "::error::The alert topic is not encrypted with a KMS key."
+            exit 1
+          fi
+
+          for rule in $(tf output -json alert_rules | jq -r '.[].name'); do
+            state="$(aws events describe-rule --name "${rule}" --query State --output text)"
+            target="$(aws events list-targets-by-rule --rule "${rule}" --query 'Targets[0].Arn' --output text)"
+            if [ "${state}" != "ENABLED" ] || [ "${target}" != "${topic_arn}" ]; then
+              echo "::error::Rule ${rule} is ${state} targeting ${target}; expected ENABLED targeting ${topic_arn}."
+              exit 1
+            fi
+            echo "rule ${rule} is ENABLED and targets the alert topic"
+          done
+
+          expected="$(tf output -json alert_subscriptions | jq 'length')"
+          for arn in "${topic_arn}" "${health_arn}"; do
+            live="$(aws sns list-subscriptions-by-topic --topic-arn "${arn}" \
+              --query 'length(Subscriptions)' --output text)"
+            if [ "${expected}" -eq 0 ] || [ "${live}" -lt "${expected}" ]; then
+              echo "::error::${arn} has ${live} subscriptions for ${expected} configured recipients."
+              exit 1
+            fi
+          done
+
+          for alarm in $(tf output -json health_alarms | jq -r '.[]'); do
+            state="$(aws cloudwatch describe-alarms --alarm-names "${alarm}" \
+              --query 'MetricAlarms[0].StateValue' --output text)"
+            if [ "${state}" = "None" ] || [ -z "${state}" ]; then
+              echo "::error::Alarm ${alarm} does not exist; the alert channel is unwatched."
+              exit 1
+            fi
+          done
+
+          {
+            echo "## Monitoring deployed"
+            echo
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Runner commit | $(git -C "${GITHUB_WORKSPACE}" rev-parse HEAD) |"
+            echo "| Framework commit | ${FRAMEWORK_SHA} |"
+            echo "| Run | ${GITHUB_RUN_ID} |"
+            echo
+            echo "| Topic | Subscription | Status |"
+            echo "| --- | --- | --- |"
+            for arn in "${topic_arn}" "${health_arn}"; do
+              aws sns list-subscriptions-by-topic --topic-arn "${arn}" --output json \
+                | jq -r --arg topic "${arn##*:}" '.Subscriptions[] | "| \($topic) | \(.Endpoint) | \(if .SubscriptionArn == "PendingConfirmation" then "pending confirmation" else "confirmed" end) |"'
+            done
+          } >> "${GITHUB_STEP_SUMMARY}"

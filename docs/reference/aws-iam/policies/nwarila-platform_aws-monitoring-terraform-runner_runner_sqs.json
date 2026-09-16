@@ -1,0 +1,33 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "sqs:CreateQueue",
+        "sqs:TagQueue"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:sqs:us-east-1:<account-id>:security-change-alerts-dlq",
+      "Sid": "CreateOnlyTheDeadLetterQueueTaggedAsThisRepositorys"
+    },
+    {
+      "Action": [
+        "sqs:DeleteQueue",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:ListQueueTags",
+        "sqs:SetQueueAttributes",
+        "sqs:TagQueue",
+        "sqs:UntagQueue"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:sqs:us-east-1:<account-id>:security-change-alerts-dlq",
+      "Sid": "ManageOnlyTheDeadLetterQueue"
+    }
+  ],
+  "Version": "2012-10-17"
+}
