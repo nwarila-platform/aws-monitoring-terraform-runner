@@ -102,10 +102,26 @@ jobs:
 
       # Identity is passed as command-line -var so the value file cannot restate who deployed.
       # CommitSha is this runner's checked-out commit, read back from git rather than github.sha.
+      #
+      # Recipients travel the same way, from a secret rather than the value file: this repository
+      # is public and a published address is a scraped address. An unset or malformed secret stops
+      # the deploy here, because the alternative is a channel that applies green and emails
+      # nobody. The value is an HCL list, for example ["alerts@example.com"].
       - name: Terraform plan
+        env:
+          ALERT_EMAILS: ${{ secrets.ALERT_EMAILS }}
         run: |
           set -euo pipefail
+          if [ -z "${ALERT_EMAILS}" ]; then
+            echo "::error::The ALERT_EMAILS repository secret is not set; this deploy would email nobody."
+            exit 1
+          fi
+          case "${ALERT_EMAILS}" in
+            \[*\]) ;;
+            *) echo '::error::ALERT_EMAILS must be a list, for example ["alerts@example.com"].'; exit 1 ;;
+          esac
           terraform -chdir="${FRAMEWORK}/terraform" plan -input=false -out=tfplan \
+            -var "alert_emails=${ALERT_EMAILS}"                                  \
             -var "commit_sha=$(git -C "${GITHUB_WORKSPACE}" rev-parse HEAD)"     \
             -var "repository=${GITHUB_REPOSITORY}"                               \
             -var "repository_id=${GITHUB_REPOSITORY_ID}"                         \

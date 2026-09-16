@@ -33,4 +33,15 @@ alert topic's `NumberOfNotificationsFailed` is zero.
 
 ## Changing recipients
 
-Edit `alert_emails` in `terraform/prod.tfvars` and merge. Removing an address unsubscribes it.
+Recipients are not in this repository. It is public, so the list lives in the `ALERT_EMAILS`
+repository secret and reaches Terraform as a command-line `-var`, which outranks every value
+file. Set it as an HCL list:
+
+```sh
+gh secret set ALERT_EMAILS -R nwarila-platform/aws-monitoring-terraform-runner \
+  --body '["alerts@example.com", "oncall@example.com"]'
+```
+
+Then re-run the deploy. Removing an address from the secret unsubscribes it on the next run. A
+missing or malformed secret fails the deploy before it plans, because a deployment with no
+recipients applies green and emails nobody.

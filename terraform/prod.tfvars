@@ -5,9 +5,11 @@
 # The alerts protect the real account.
 environment = "prod"
 
-# Each address confirms two SNS subscriptions, one for alerts and one for channel health, before
-# anything is delivered.
-alert_emails = ["aws-alerts@nicholaswarila.com"]
+# alert_emails is deliberately absent. This repository is public, so the recipients arrive from
+# the ALERT_EMAILS repository secret as a command-line -var, which outranks this file. The deploy
+# refuses to run without it rather than creating a channel that emails nobody. Each address
+# confirms two SNS subscriptions, one for alerts and one for channel health, before anything is
+# delivered.
 
 # Neither account in the organization had a trail on 2026-09-16, and the alerts cannot fire
 # without one.
