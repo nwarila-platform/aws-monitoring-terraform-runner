@@ -7,7 +7,7 @@ pipelines are exempt from security-group alerts, and the workflow that applies i
 
 ## How it deploys
 
-Every merge to `main` runs [`aws-deploy.yaml`](.github/workflows/aws-deploy.yaml), which:
+Every merge to `main` runs [`aws-deploy.yaml`](.github/workflows/aws-deploy.yaml). Each run rewrites the `CommitSha` and `RunId` provenance tags on every resource, so no run is a no-op plan. It:
 
 1. checks out the framework at the commit in [`.github/terraform-framework-pin`](.github/terraform-framework-pin);
 2. assumes the deploy role over GitHub OIDC and plans with [`terraform/prod.tfvars`](terraform/prod.tfvars);

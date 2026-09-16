@@ -16,16 +16,15 @@
     {
       "Action": "s3:ListBucket",
       "Condition": {
-        "StringEquals": {
+        "StringLikeIfExists": {
           "s3:prefix": [
-            "nwarila-platform/aws-monitoring-terraform-runner/terraform.tfstate",
-            "nwarila-platform/aws-monitoring-terraform-runner/terraform.tfstate.tflock"
+            "nwarila-platform/aws-monitoring-terraform-runner/*"
           ]
         }
       },
       "Effect": "Allow",
       "Resource": "arn:aws:s3:::<account-id>-terraform",
-      "Sid": "ListOnlyThoseTwoKeys"
+      "Sid": "ListOnlyThisRepositorysStatePath"
     },
     {
       "Action": [
@@ -48,12 +47,15 @@
         "s3:GetLifecycleConfiguration",
         "s3:GetReplicationConfiguration",
         "s3:ListBucket",
+        "s3:ListTagsForResource",
         "s3:PutBucketOwnershipControls",
         "s3:PutBucketPolicy",
         "s3:PutBucketPublicAccessBlock",
         "s3:PutBucketTagging",
         "s3:PutEncryptionConfiguration",
-        "s3:PutLifecycleConfiguration"
+        "s3:PutLifecycleConfiguration",
+        "s3:TagResource",
+        "s3:UntagResource"
       ],
       "Effect": "Allow",
       "Resource": "arn:aws:s3:::<account-id>-cloudtrail",

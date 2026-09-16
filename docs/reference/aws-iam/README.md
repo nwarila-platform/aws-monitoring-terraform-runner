@@ -27,13 +27,19 @@ workflow. A branch, a fork, or another workflow cannot assume it. No inline poli
 | `…_cloudwatch` | Create, update, tag and delete alarms; read alarm state | Alarm names `security-change-alerts-*`; creation by request tag, changes by resource tag. `DescribeAlarms` takes no resource |
 | `…_events` | Create, update, target, tag and delete rules; test patterns | Rule names `security-change-alerts-*`; creation by request tag, changes by resource tag. `TestEventPattern` takes no resource |
 | `…_kms` | Create, manage, alias and schedule deletion of one key | Creation by request tag, because a new key has no ARN; changes by resource tag; the alias is the one name |
-| `…_s3` | Read and write this repository's state and lock; own the trail log bucket | The exact state key and lock; the exact bucket `<account-id>-cloudtrail`. No `DeleteBucket` |
+| `…_s3` | Read and write this repository's state and lock; list the state bucket; own the trail log bucket | The exact state key and lock; listings limited to this repository's path when a prefix is given; the exact bucket `<account-id>-cloudtrail`. No `DeleteBucket` |
 | `…_sns` | Create and manage the alert and health topics and their subscriptions | The two exact topic ARNs; creation also by request tag |
 | `…_sqs` | Create and manage the dead-letter queue | The exact queue ARN; creation also by request tag |
 
 Creating a key, a rule, or an alarm with tags also requires the service's tag action, and at that
 moment the resource carries no tag to test. Those tag actions are therefore granted alongside
 creation under the same request-tag condition, and again under the resource tag for later changes.
+
+Listing the state bucket is conditioned with `StringLikeIfExists`. On the first deploy the state
+file does not exist, and S3 answers that read with 404 rather than 403 only for a caller holding
+`s3:ListBucket`, through an implicit check that carries no `s3:prefix`. A listing that names a
+prefix is held to this repository's path; one that names none can see the bucket's key names, but
+never their contents.
 
 ## The account control
 
