@@ -15,6 +15,10 @@ commands below read it, so a document cannot be written here and then forgotten 
 |---|---|---|
 | `nwarila-platform_aws-monitoring-terraform-runner_runner` | GitHub OIDC: `aws-deploy.yaml` on `main` of this repository only | the seven `…_runner_*` below |
 
+Create the role with the default path `/`. The framework names the deploying role in its KMS key
+policy by rebuilding the role ARN from the assumed-role session, and a session ARN does not carry
+the role's path, so a role on any other path would be named wrongly and key creation would fail.
+
 The trust requires the `sts.amazonaws.com` audience, this repository's id, `refs/heads/main`, one
 of the two `sub` forms GitHub issues for it, and a `job_workflow_ref` naming the one deploy
 workflow. A branch, a fork, or another workflow cannot assume it. No inline policies.
@@ -37,9 +41,9 @@ creation under the same request-tag condition, and again under the resource tag 
 
 Listing the state bucket is conditioned with `StringLikeIfExists`. On the first deploy the state
 file does not exist, and S3 answers that read with 404 rather than 403 only for a caller holding
-`s3:ListBucket`, through an implicit check that carries no `s3:prefix`. A listing that names a
-prefix is held to this repository's path; one that names none can see the bucket's key names, but
-never their contents.
+`s3:ListBucket`, through an implicit check whose `s3:prefix` context AWS does not document;
+`…IfExists` allows it either way. A listing that names a prefix is held to this repository's path;
+one that names none can see the bucket's key names and listing metadata, but never their contents.
 
 ## The account control
 
