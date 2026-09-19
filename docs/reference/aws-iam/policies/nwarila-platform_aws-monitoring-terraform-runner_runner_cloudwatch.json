@@ -1,0 +1,42 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:TagResource"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:cloudwatch:us-east-1:<account-id>:alarm:security-change-alerts-*",
+      "Sid": "CreateOnlyAlarmsTaggedAsThisRepositorys"
+    },
+    {
+      "Action": [
+        "cloudwatch:DeleteAlarms",
+        "cloudwatch:ListTagsForResource",
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:TagResource",
+        "cloudwatch:UntagResource"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:cloudwatch:us-east-1:<account-id>:alarm:security-change-alerts-*",
+      "Sid": "ManageOnlyAlarmsTaggedAsThisRepositorys"
+    },
+    {
+      "Action": "cloudwatch:DescribeAlarms",
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "ReadAlarmStateWhichTakesNoResource"
+    }
+  ],
+  "Version": "2012-10-17"
+}

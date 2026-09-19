@@ -1,0 +1,46 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "events:PutRule",
+        "events:TagResource"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:events:us-east-1:<account-id>:rule/security-change-alerts-*",
+      "Sid": "CreateOnlyRulesTaggedAsThisRepositorys"
+    },
+    {
+      "Action": [
+        "events:DeleteRule",
+        "events:DescribeRule",
+        "events:ListTagsForResource",
+        "events:ListTargetsByRule",
+        "events:PutRule",
+        "events:PutTargets",
+        "events:RemoveTargets",
+        "events:TagResource",
+        "events:UntagResource"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:events:us-east-1:<account-id>:rule/security-change-alerts-*",
+      "Sid": "ManageOnlyRulesTaggedAsThisRepositorys"
+    },
+    {
+      "Action": "events:TestEventPattern",
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "ProveThePatternsBeforeApplying"
+    }
+  ],
+  "Version": "2012-10-17"
+}

@@ -1,0 +1,43 @@
+# Deny-all .gitignore strategy per org ADR-0003.
+# Anything not explicitly allowlisted below is ignored.
+**
+
+# Core repo files
+!.editorconfig
+!.gitattributes
+!.gitignore
+!.markdownlint-cli2.jsonc
+!LICENSE
+!Makefile
+!README.md
+
+# GitHub configuration
+!/.github/
+!/.github/CODEOWNERS
+!/.github/terraform-framework-pin
+!/.github/workflows/
+!/.github/workflows/aws-deploy.yaml
+!/.github/workflows/ci.yaml
+
+# The deployment's values
+!/terraform/
+!/terraform/prod.tfvars
+
+# Documentation
+!/docs/
+!/docs/how-to/
+!/docs/how-to/deploy-and-confirm-recipients.md
+!/docs/reference/
+!/docs/reference/aws-iam/
+!/docs/reference/aws-iam/README.md
+!/docs/reference/aws-iam/manifest.json
+!/docs/reference/aws-iam/controls/
+!/docs/reference/aws-iam/controls/*.json
+!/docs/reference/aws-iam/policies/
+!/docs/reference/aws-iam/policies/*.json
+!/docs/reference/aws-iam/roles/
+!/docs/reference/aws-iam/roles/*.trust.json
+
+# Tools
+!/tools/
+!/tools/install_ci_tools.sh

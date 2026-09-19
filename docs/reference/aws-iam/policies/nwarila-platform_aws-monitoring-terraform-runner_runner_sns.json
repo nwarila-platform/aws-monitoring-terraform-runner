@@ -1,0 +1,49 @@
+{
+  "Statement": [
+    {
+      "Action": "sns:CreateTopic",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:sns:us-east-1:<account-id>:security-change-alerts",
+        "arn:aws:sns:us-east-1:<account-id>:security-change-alerts-health"
+      ],
+      "Sid": "CreateOnlyTheTwoTopicsTaggedAsThisRepositorys"
+    },
+    {
+      "Action": [
+        "sns:DeleteTopic",
+        "sns:GetTopicAttributes",
+        "sns:ListSubscriptionsByTopic",
+        "sns:ListTagsForResource",
+        "sns:SetTopicAttributes",
+        "sns:Subscribe",
+        "sns:TagResource",
+        "sns:UntagResource"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:sns:us-east-1:<account-id>:security-change-alerts",
+        "arn:aws:sns:us-east-1:<account-id>:security-change-alerts-health"
+      ],
+      "Sid": "ManageOnlyTheTwoTopics"
+    },
+    {
+      "Action": [
+        "sns:GetSubscriptionAttributes",
+        "sns:Unsubscribe"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:sns:us-east-1:<account-id>:security-change-alerts",
+        "arn:aws:sns:us-east-1:<account-id>:security-change-alerts-health"
+      ],
+      "Sid": "ManageOnlyTheseTopicsSubscriptions"
+    }
+  ],
+  "Version": "2012-10-17"
+}

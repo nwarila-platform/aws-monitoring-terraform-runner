@@ -1,0 +1,47 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "cloudtrail:DescribeTrails",
+        "cloudtrail:GetEventSelectors",
+        "cloudtrail:GetTrailStatus",
+        "cloudtrail:ListTrails"
+      ],
+      "Effect": "Allow",
+      "Resource": "*",
+      "Sid": "ReadTrailsToProveCoverageAndPreventASecondTrail"
+    },
+    {
+      "Action": [
+        "cloudtrail:AddTags",
+        "cloudtrail:CreateTrail"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/RepositoryId": "<repository-id>"
+        }
+      },
+      "Effect": "Allow",
+      "Resource": "arn:aws:cloudtrail:us-east-1:<account-id>:trail/management-events",
+      "Sid": "CreateOnlyTheManagementEventTrailTaggedAsThisRepositorys"
+    },
+    {
+      "Action": [
+        "cloudtrail:AddTags",
+        "cloudtrail:DeleteTrail",
+        "cloudtrail:GetInsightSelectors",
+        "cloudtrail:GetTrail",
+        "cloudtrail:ListTags",
+        "cloudtrail:PutEventSelectors",
+        "cloudtrail:RemoveTags",
+        "cloudtrail:StartLogging",
+        "cloudtrail:StopLogging",
+        "cloudtrail:UpdateTrail"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:cloudtrail:us-east-1:<account-id>:trail/management-events",
+      "Sid": "ManageOnlyTheManagementEventTrail"
+    }
+  ],
+  "Version": "2012-10-17"
+}

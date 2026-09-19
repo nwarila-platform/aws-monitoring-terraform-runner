@@ -1,0 +1,28 @@
+{
+  "controls": {
+    "nwarila-platform_us-east-1-only": {
+      "attach_to": [
+        "the github_nwarila-platform IAM Identity Center permission set, as an inline policy",
+        "every nwarila-platform_*_runner role in the account"
+      ],
+      "document": "controls/nwarila-platform_us-east-1-only.json"
+    }
+  },
+  "proposed": "2026-09-16",
+  "roles": {
+    "nwarila-platform_aws-monitoring-terraform-runner_runner": {
+      "attached": [
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_cloudtrail.json",
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_cloudwatch.json",
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_events.json",
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_kms.json",
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_s3.json",
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_sns.json",
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_sqs.json"
+      ],
+      "inline": [],
+      "trust": "roles/nwarila-platform_aws-monitoring-terraform-runner_runner.trust.json"
+    }
+  },
+  "status": "proposed, awaiting owner approval; nothing here has been applied"
+}
