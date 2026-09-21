@@ -13,11 +13,7 @@ commands below read it, so a document cannot be written here and then forgotten 
 
 | Role | Trusted by | Attached policies |
 |---|---|---|
-| `nwarila-platform_aws-monitoring-terraform-runner_runner` | GitHub OIDC: `aws-deploy.yaml` on `main` of this repository only | the seven `…_runner_*` below |
-
-Create the role with the default path `/`. The framework names the deploying role in its KMS key
-policy by rebuilding the role ARN from the assumed-role session, and a session ARN does not carry
-the role's path, so a role on any other path would be named wrongly and key creation would fail.
+| `nwarila-platform_aws-monitoring-terraform-runner_runner` | GitHub OIDC: `aws-deploy.yaml` on `main` of this repository only | the eight `…_runner_*` below |
 
 The trust requires the `sts.amazonaws.com` audience, this repository's id, `refs/heads/main`, one
 of the two `sub` forms GitHub issues for it, and a `job_workflow_ref` naming the one deploy
@@ -29,6 +25,7 @@ workflow. A branch, a fork, or another workflow cannot assume it. No inline poli
 |---|---|---|
 | `…_cloudtrail` | Read every trail; create and manage one trail | Reads take no resource. Creation needs the `RepositoryId` request tag; management is the one trail ARN `management-events` |
 | `…_cloudwatch` | Create, update, tag and delete alarms; read alarm state | Alarm names `security-change-alerts-*`; creation by request tag, changes by resource tag. `DescribeAlarms` takes no resource |
+| `…_iam` | Read this role's own definition | The one role ARN. The framework asks IAM for the deploying role's real ARN, path included, to name it in the KMS key policy |
 | `…_events` | Create, update, target, tag and delete rules; test patterns | Rule names `security-change-alerts-*`; creation by request tag, changes by resource tag. `TestEventPattern` takes no resource |
 | `…_kms` | Create, manage, alias and schedule deletion of one key | Creation by request tag, because a new key has no ARN; changes by resource tag; the alias is the one name |
 | `…_s3` | Read and write this repository's state and lock; list the state bucket; own the trail log bucket | The exact state key and lock; listings limited to this repository's path when a prefix is given; the exact bucket `<account-id>-cloudtrail`. No `DeleteBucket` |
