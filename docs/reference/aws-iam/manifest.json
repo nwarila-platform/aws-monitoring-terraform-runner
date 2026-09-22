@@ -15,6 +15,7 @@
         "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_cloudtrail.json",
         "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_cloudwatch.json",
         "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_events.json",
+        "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_iam.json",
         "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_kms.json",
         "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_s3.json",
         "policies/nwarila-platform_aws-monitoring-terraform-runner_runner_sns.json",

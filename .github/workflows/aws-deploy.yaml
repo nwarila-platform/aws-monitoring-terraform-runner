@@ -132,8 +132,9 @@ jobs:
       - name: Verify the account's CloudTrail configuration
         run: bash "${FRAMEWORK}/tools/check_cloudtrail.sh" --plan "${FRAMEWORK}/terraform/tfplan"
 
+      # This runner's own role is a real member of the exempt fleet, so a misspelt pattern fails.
       - name: Prove the planned event patterns against EventBridge
-        run: bash "${FRAMEWORK}/tools/check_event_patterns.sh" "${FRAMEWORK}/terraform/tfplan"
+        run: bash "${FRAMEWORK}/tools/check_event_patterns.sh" "${FRAMEWORK}/terraform/tfplan" "${DEPLOY_ROLE}"
 
       - name: Terraform apply
         run: terraform -chdir="${FRAMEWORK}/terraform" apply -input=false tfplan

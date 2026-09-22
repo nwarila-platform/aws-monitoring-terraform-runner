@@ -15,16 +15,7 @@ environment = "prod"
 # without one.
 manage_trail = true
 
-# The deploy pipelines whose security-group churn is not emailed, measured from 30 days of
-# CloudTrail. Their IAM changes still alert, and so does every change made by a person. Adding a
-# repository to the fleet means adding its runner role here.
-exempt_pipeline_roles = [
-  "nwarila-platform_aws-workspace-builder_runner",
-  "nwarila-platform_jenkins_runner",
-  "nwarila-platform_keycloak_runner",
-  "nwarila-platform_nessus_runner",
-  "nwarila-platform_pdq-deploy-inventory_runner",
-  "nwarila-platform_rancher_runner",
-  "nwarila-platform_windows-fileserver-ha_runner",
-  "nwarila-platform_windows-wsus_runner",
-]
+# The deploy pipelines whose security-group churn is not emailed. Every one of them assumes a role
+# named nwarila-platform_<repository>_runner, so one pattern covers the fleet, including repositories
+# added later. Their IAM changes still alert, and so does every change made by a person.
+exempt_pipeline_roles = ["nwarila-platform_*_runner"]
