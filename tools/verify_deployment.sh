@@ -48,7 +48,9 @@ health_topic="$(expect -r '.values.outputs.health_topic_arn.value')"
 
 # Read into a variable, not a process substitution, so a failed read stops the script; and a
 # state with no rules is refused, because checking nothing is not a pass.
-rules="$(expect '(.values.outputs.alert_rules.value // {}) | to_entries[] | { key: .key, name: .value.name }')"
+rules="$(expect '(.values.outputs.alert_rules.value // {})
+  | if type == "object" then to_entries[] else error("alert_rules is not a map") end
+  | { key: .key, name: .value.name }')"
 [ -n "${rules}" ] || { echo "::error::The applied state lists no alert rules; there is nothing to verify." >&2; exit 1; }
 
 while read -r rule; do
@@ -156,7 +158,8 @@ check_subscriptions "${health_topic}"
 
 #region ------ [ Alarms ] ----------------------------------------------------------------------- #
 
-alarm_list="$(expect -r '(.values.outputs.health_alarms.value // [])[]')"
+alarm_list="$(expect -r '(.values.outputs.health_alarms.value // [])
+  | if type == "array" then .[] else error("health_alarms is not a list") end')"
 [ -n "${alarm_list}" ] || { echo "::error::The applied state lists no health alarms; there is nothing to verify." >&2; exit 1; }
 mapfile -t alarm_names <<< "${alarm_list}"
 alarms="$(live cloudwatch describe-alarms --alarm-names "${alarm_names[@]}")"

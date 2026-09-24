@@ -98,6 +98,9 @@ case_ configured_address_as_email_json strict 1 '1 missing' "${json_protocol}"
 # A state that lists nothing to check is refused, never passed.
 case_ state_without_rules strict 1 'lists no alert rules' - 'del(.values.outputs.alert_rules)'
 case_ state_without_alarms strict 1 'lists no health alarms' - '.values.outputs.health_alarms.value = []'
+# A list of another shape is refused rather than read as if it were the expected one.
+case_ state_rules_not_a_map strict 5 'alert_rules is not a map' - '.values.outputs.alert_rules.value |= [.[]]'
+case_ state_alarms_not_a_list strict 5 'health_alarms is not a list' - '.values.outputs.health_alarms.value |= (to_entries | map({key: (.key | tostring), value}) | from_entries)'
 case_ rule_disabled strict 1 'is not ENABLED' '.["events describe-rule security-change-alerts-iam"].State = "DISABLED"'
 case_ rule_with_two_targets strict 1 'has 2 targets' '.["events list-targets-by-rule security-change-alerts-iam"].Targets |= . + .'
 case_ target_retry_changed strict 1 "target differs" '.["events list-targets-by-rule security-change-alerts-iam"].Targets[0].RetryPolicy.MaximumEventAgeInSeconds = 86400'

@@ -262,11 +262,12 @@ jobs:
         env:
           MODE: ${{ github.event_name == 'schedule' && 'strict' || 'post-apply' }}
         # The summary is written whatever the outcome, since a failed read-back is the one a
-        # person most needs to read; the step then exits with the verifier's own status.
+        # person most needs to read; the step then exits with the verifier's own status. GitHub
+        # runs this shell with -e, so the pipeline's failure is caught here rather than ending it.
         run: |
           set -uo pipefail
-          bash tools/verify_deployment.sh "${FRAMEWORK}/terraform" "${MODE}" 2>&1 | tee verify.log
-          status="${PIPESTATUS[0]}"
+          status=0
+          bash tools/verify_deployment.sh "${FRAMEWORK}/terraform" "${MODE}" 2>&1 | tee verify.log || status=$?
           {
             echo "## Deployment read back (${MODE})"
             echo
