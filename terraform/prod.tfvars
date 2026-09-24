@@ -15,6 +15,10 @@ environment = "prod"
 # without one.
 manage_trail = true
 
+# This account has no key-approval process, so the framework creates and owns the key that
+# encrypts the alert topics.
+alert_key_alias = null
+
 # The deploy pipelines whose security-group churn is not emailed. Every one of them assumes a role
 # named nwarila-platform_<repository>_runner, so one pattern covers the fleet, including repositories
 # added later. Their IAM changes still alert, and so does every change made by a person.
