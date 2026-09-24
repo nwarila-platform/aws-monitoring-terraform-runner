@@ -3,9 +3,10 @@
 > **Status: applied.** The role and seven of its policies were created on 2026-09-16 and the
 > `…_runner_iam` policy on 2026-09-22. On 2026-09-24 the trust document and all eight policies
 > here equalled the account's export of them, with the account and repository ids replaced by
-> placeholders, and the role carried no inline policy. The account control is written but **not
-> attached**, pending the owner's decision recorded in [`manifest.json`](manifest.json). A change
-> here is a proposal until it is applied and this status says so.
+> placeholders, and the role carried no inline policy. The account control is written and **not
+> attached**: the owner accepted the gap on 2026-09-24, as
+> [the account control](#the-account-control) records. A change here is a proposal until it is
+> applied and this status says so.
 
 Everything the deploy workflow needs in AWS, and one account control the alerts rely on. Two
 values are placeholders: `<account-id>`, and `<repository-id>`, the numeric id of this repository.
@@ -62,6 +63,23 @@ IAM's single endpoint is in `us-east-1`, so IAM keeps working. Services whose gl
 elsewhere, such as Global Accelerator in `us-west-2`, are blocked. **This is not complete
 protection:** the root user, and any principal created later without the policy, are not bound by
 it. Moving workloads out of the management account is AWS's recommended fix and is out of scope.
+
+### Not attached: the accepted gap
+
+On 2026-09-24 the owner decided not to attach the control at this time, and accepted the gap it
+closes: a security group changed outside `us-east-1` raises no alert. The decision rests on a scan
+of the last 90 days of CloudTrail write events in every enabled region but `us-east-1`
+(`LookupEvents` with `ReadOnly=false`, at most 50 events per region):
+
+- fourteen regions had none;
+- `us-west-2` returned its 50 most recent, the query's cap, all from 2026-07-01 and 2026-07-02:
+  an administrator's VPC, instance and image work and the records EC2 wrote for it, so any others
+  are older;
+- `us-east-2` had 14: console sign-ins, two key rotations AWS made itself, and one address
+  released by an administrator on 2026-06-30.
+
+No pipeline role wrote outside `us-east-1`. The documents here stay ready: attaching the control
+as [`manifest.json`](manifest.json) lists is what closes the gap.
 
 ## Reconciling the account with these documents
 
