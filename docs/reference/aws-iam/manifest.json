@@ -2,11 +2,15 @@
   "controls": {
     "nwarila-platform_us-east-1-only": {
       "attach_to": [
-        "the github_nwarila-platform IAM Identity Center permission set, as an inline policy",
         "every nwarila-platform_*_runner role in the account"
       ],
-      "document": "controls/nwarila-platform_us-east-1-only.json"
+      "document": "controls/nwarila-platform_us-east-1-only.json",
+      "status": "not attached; pending the owner's decision on the 90-day region scan of 2026-09-24"
     }
+  },
+  "applied": {
+    "2026-09-16": "the role, its trust, and seven policies",
+    "2026-09-22": "the _runner_iam policy"
   },
   "proposed": "2026-09-16",
   "roles": {
@@ -25,5 +29,5 @@
       "trust": "roles/nwarila-platform_aws-monitoring-terraform-runner_runner.trust.json"
     }
   },
-  "status": "proposed, awaiting owner approval; nothing here has been applied"
+  "status": "applied; documents equal the account's export as of 2026-09-24"
 }

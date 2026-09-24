@@ -1,11 +1,15 @@
 name: AWS Deploy
 
 # Applies the pinned aws-monitoring-terraform-framework commit, with this repository's values, to
-# the organization account. Every merge to main converges it; nothing outside main can reach AWS.
+# the organization account, then reads the deployment back from AWS. Every merge to main converges
+# it; nothing outside main can reach AWS. Once a day the read-back runs alone, with no apply, so a
+# subscription or a rule lost since the last converge is noticed within a day rather than never.
 
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 11 * * *"
   workflow_dispatch:
 
 permissions: {}
@@ -35,7 +39,7 @@ jobs:
   aws-deploy:
     name: Converge monitoring
     needs: main-ref
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -73,6 +77,25 @@ jobs:
           path: .frameworks/aws-monitoring-terraform-framework
           persist-credentials: false
 
+      # Recipients come from a secret rather than the value file: this repository is public and a
+      # published address is a scraped address. GitHub masks only the exact secret string, so each
+      # address is registered on its own, before anything prints, and is then redacted wherever it
+      # appears in this job's log, inside a Terraform diff line included. The secret is a JSON
+      # array of address strings; an unset or malformed one stops the deploy here, because the
+      # alternative is a channel that applies green and emails nobody.
+      - name: Mask the recipients
+        env:
+          ALERT_EMAILS: ${{ secrets.ALERT_EMAILS }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "${ALERT_EMAILS}" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string")' > /dev/null 2>&1; then
+            echo '::error::The ALERT_EMAILS repository secret must be a JSON array of one or more address strings, for example ["alerts@example.com"]; HCL forms such as a trailing comma are refused.'
+            exit 1
+          fi
+          printf '%s' "${ALERT_EMAILS}" | jq -r '.[]' | while read -r address; do
+            echo "::add-mask::${address}"
+          done
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
@@ -102,24 +125,12 @@ jobs:
 
       # Identity is passed as command-line -var so the value file cannot restate who deployed.
       # CommitSha is this runner's checked-out commit, read back from git rather than github.sha.
-      #
-      # Recipients travel the same way, from a secret rather than the value file: this repository
-      # is public and a published address is a scraped address. An unset or malformed secret stops
-      # the deploy here, because the alternative is a channel that applies green and emails
-      # nobody. The value is an HCL list, for example ["alerts@example.com"].
+      # The recipients travel the same way: a JSON array is an HCL list.
       - name: Terraform plan
         env:
           ALERT_EMAILS: ${{ secrets.ALERT_EMAILS }}
         run: |
           set -euo pipefail
-          if [ -z "${ALERT_EMAILS}" ]; then
-            echo "::error::The ALERT_EMAILS repository secret is not set; this deploy would email nobody."
-            exit 1
-          fi
-          case "${ALERT_EMAILS}" in
-            \[*\]) ;;
-            *) echo '::error::ALERT_EMAILS must be a list, for example ["alerts@example.com"].'; exit 1 ;;
-          esac
           terraform -chdir="${FRAMEWORK}/terraform" plan -input=false -out=tfplan \
             -var "alert_emails=${ALERT_EMAILS}"                                  \
             -var "commit_sha=$(git -C "${GITHUB_WORKSPACE}" rev-parse HEAD)"     \
@@ -142,53 +153,11 @@ jobs:
       - name: Verify a logging trail now covers the region
         run: bash "${FRAMEWORK}/tools/check_cloudtrail.sh"
 
-      # Terraform's own report is not the proof: read the rules, targets, topics, subscriptions and
-      # alarms back from AWS and fail on anything missing or miswired.
-      - name: Verify the deployed monitoring against AWS
+      - name: Record what was deployed
         env:
           FRAMEWORK_SHA: ${{ steps.pin.outputs.sha }}
         run: |
           set -euo pipefail
-          tf() { terraform -chdir="${FRAMEWORK}/terraform" "$@"; }
-          topic_arn="$(tf output -raw alert_topic_arn)"
-          health_arn="$(tf output -raw health_topic_arn)"
-
-          key_id="$(aws sns get-topic-attributes --topic-arn "${topic_arn}" \
-            --query 'Attributes.KmsMasterKeyId' --output text)"
-          if [ -z "${key_id}" ] || [ "${key_id}" = "None" ]; then
-            echo "::error::The alert topic is not encrypted with a KMS key."
-            exit 1
-          fi
-
-          for rule in $(tf output -json alert_rules | jq -r '.[].name'); do
-            state="$(aws events describe-rule --name "${rule}" --query State --output text)"
-            target="$(aws events list-targets-by-rule --rule "${rule}" --query 'Targets[0].Arn' --output text)"
-            if [ "${state}" != "ENABLED" ] || [ "${target}" != "${topic_arn}" ]; then
-              echo "::error::Rule ${rule} is ${state} targeting ${target}; expected ENABLED targeting ${topic_arn}."
-              exit 1
-            fi
-            echo "rule ${rule} is ENABLED and targets the alert topic"
-          done
-
-          expected="$(tf output -json alert_subscriptions | jq 'length')"
-          for arn in "${topic_arn}" "${health_arn}"; do
-            live="$(aws sns list-subscriptions-by-topic --topic-arn "${arn}" \
-              --query 'length(Subscriptions)' --output text)"
-            if [ "${expected}" -eq 0 ] || [ "${live}" -lt "${expected}" ]; then
-              echo "::error::${arn} has ${live} subscriptions for ${expected} configured recipients."
-              exit 1
-            fi
-          done
-
-          for alarm in $(tf output -json health_alarms | jq -r '.[]'); do
-            state="$(aws cloudwatch describe-alarms --alarm-names "${alarm}" \
-              --query 'MetricAlarms[0].StateValue' --output text)"
-            if [ "${state}" = "None" ] || [ -z "${state}" ]; then
-              echo "::error::Alarm ${alarm} does not exist; the alert channel is unwatched."
-              exit 1
-            fi
-          done
-
           {
             echo "## Monitoring deployed"
             echo
@@ -197,11 +166,108 @@ jobs:
             echo "| Runner commit | $(git -C "${GITHUB_WORKSPACE}" rev-parse HEAD) |"
             echo "| Framework commit | ${FRAMEWORK_SHA} |"
             echo "| Run | ${GITHUB_RUN_ID} |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  # Terraform's own report is not the proof: the rules, targets, topics, subscriptions and alarms
+  # are read back from AWS and compared with what Terraform last applied. After a converge that
+  # is the deploy's acceptance; on the daily schedule, with the converge skipped, it is the only
+  # thing that notices a subscription or a rule lost since. GitHub skips a job whose needed job
+  # was skipped unless its own condition says otherwise, so this one names the outcomes it runs
+  # after: a successful converge, or none. Never after a failed or cancelled one.
+  verify:
+    name: Read the deployment back
+    needs: [main-ref, aws-deploy]
+    if: ${{ !cancelled() && needs.main-ref.result == 'success' && (needs.aws-deploy.result == 'success' || needs.aws-deploy.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      id-token: write # required to mint the GitHub OIDC token the deploy role trusts
+      contents: read # required to check out this repository and the pinned framework
+    env:
+      AWS_REGION: us-east-1
+      DEPLOY_ROLE: nwarila-platform_aws-monitoring-terraform-runner_runner
+      FRAMEWORK: .frameworks/aws-monitoring-terraform-framework
+
+    steps:
+      - name: Check out runner
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Read the framework pin
+        id: pin
+        run: |
+          set -euo pipefail
+          mapfile -t lines < .github/terraform-framework-pin
+          if [ "${#lines[@]}" -ne 1 ] || [[ ! "${lines[0]}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::.github/terraform-framework-pin must hold exactly one lowercase 40-character SHA."
+            exit 1
+          fi
+          echo "sha=${lines[0]}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check out aws-monitoring-terraform-framework (pinned)
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: ${{ github.repository_owner }}/aws-monitoring-terraform-framework
+          ref: ${{ steps.pin.outputs.sha }}
+          path: .frameworks/aws-monitoring-terraform-framework
+          persist-credentials: false
+
+      # Masks are per job: registered again here before Terraform or AWS prints anything.
+      - name: Mask the recipients
+        env:
+          ALERT_EMAILS: ${{ secrets.ALERT_EMAILS }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "${ALERT_EMAILS}" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string")' > /dev/null 2>&1; then
+            echo '::error::The ALERT_EMAILS repository secret must be a JSON array of one or more address strings, for example ["alerts@example.com"]; HCL forms such as a trailing comma are refused.'
+            exit 1
+          fi
+          printf '%s' "${ALERT_EMAILS}" | jq -r '.[]' | while read -r address; do
+            echo "::add-mask::${address}"
+          done
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ env.DEPLOY_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+          role-session-name: aws-verify-${{ github.run_id }}
+          role-duration-seconds: 3600
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+        with:
+          # renovate: datasource=github-releases depName=hashicorp/terraform extractVersion=^v(?<version>.*)$ versioning=hashicorp
+          terraform_version: "1.15.1"
+          terraform_wrapper: false
+
+      # State is read, never written: init, then `terraform show -json` inside the verifier.
+      - name: Terraform init
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          cp terraform/prod.tfvars "${FRAMEWORK}/terraform/terraform.tfvars"
+          terraform -chdir="${FRAMEWORK}/terraform" init -input=false          \
+            -backend-config="bucket=${AWS_ACCOUNT_ID}-terraform"               \
+            -backend-config="key=${GITHUB_REPOSITORY}/terraform.tfstate"       \
+            -backend-config="region=${AWS_REGION}"
+
+      # Strict on the schedule: a pending or extra address and an alarm in ALARM fail, because
+      # nothing else will report them. After a converge a pending address is the normal state of
+      # a recipient who has not yet followed the link, so it warns. Counts only, never an address.
+      - name: Verify the deployed monitoring against AWS
+        env:
+          MODE: ${{ github.event_name == 'schedule' && 'strict' || 'post-apply' }}
+        run: |
+          set -euo pipefail
+          bash tools/verify_deployment.sh "${FRAMEWORK}/terraform" "${MODE}" | tee verify.log
+          {
+            echo "## Deployment read back (${MODE})"
             echo
-            echo "| Topic | Subscription | Status |"
-            echo "| --- | --- | --- |"
-            for arn in "${topic_arn}" "${health_arn}"; do
-              aws sns list-subscriptions-by-topic --topic-arn "${arn}" --output json \
-                | jq -r --arg topic "${arn##*:}" '.Subscriptions[] | "| \($topic) | \(.Endpoint) | \(if .SubscriptionArn == "PendingConfirmation" then "pending confirmation" else "confirmed" end) |"'
-            done
+            echo '```'
+            cat verify.log
+            echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
