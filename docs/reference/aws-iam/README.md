@@ -1,11 +1,10 @@
 # AWS IAM for approval
 
 > **Status: applied.** The role and seven of its policies were created on 2026-09-16 and the
-> `…_runner_iam` policy on 2026-09-22; these documents equal the account's export of them as of
-> 2026-09-24, with the account and repository ids replaced by placeholders. The account control
-> is written but **not attached**, pending the owner's decision recorded in
-> [`manifest.json`](manifest.json). A change here is a proposal until it is applied and this
-> status says so.
+> `…_runner_iam` policy on 2026-09-22, each from the document here at the time, with the account
+> and repository ids replaced by placeholders. The account control is written but **not
+> attached**, pending the owner's decision recorded in [`manifest.json`](manifest.json). A change
+> here is a proposal until it is applied and this status says so.
 
 Everything the deploy workflow needs in AWS, and one account control the alerts rely on. Two
 values are placeholders: `<account-id>`, and `<repository-id>`, the numeric id of this repository.

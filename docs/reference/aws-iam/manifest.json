@@ -29,5 +29,5 @@
       "trust": "roles/nwarila-platform_aws-monitoring-terraform-runner_runner.trust.json"
     }
   },
-  "status": "applied; documents equal the account's export as of 2026-09-24"
+  "status": "applied; the role and seven policies on 2026-09-16, the _runner_iam policy on 2026-09-22"
 }
