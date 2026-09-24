@@ -44,7 +44,7 @@ same() { jq --exit-status -n --argjson a "$1" --argjson b "$2" '$a == $b' > /dev
 alert_topic="$(expect -r '.values.outputs.alert_topic_arn.value')"
 health_topic="$(expect -r '.values.outputs.health_topic_arn.value')"
 
-#region ------ [ Rules and targets ] ------------------------------------------------------------ #
+#region ------ [ Rules and targets ] ----------------------------------------------------------- #
 
 # Read into a variable, not a process substitution, so a failed read stops the script; and a
 # state with no rules is refused, because checking nothing is not a pass.
@@ -82,10 +82,10 @@ while read -r rule; do
   echo "rule ${name}: ENABLED on the default bus, one target as applied"
 done <<< "${rules}"
 
-#endregion --- [ Rules and targets ] ------------------------------------------------------------ #
+#endregion --- [ Rules and targets ] ----------------------------------------------------------- #
 
 
-#region ------ [ Topics ] ----------------------------------------------------------------------- #
+#region ------ [ Topics ] ---------------------------------------------------------------------- #
 
 check_topic() {
   local arn="$1" address="$2" expected_key="$3" attributes actual_key
@@ -110,10 +110,10 @@ check_topic "${alert_topic}" aws_sns_topic_policy.us_east_1 \
   "$(expect -r '.values.root_module.resources[] | select(.address == "aws_sns_topic.us_east_1") | .values.kms_master_key_id')"
 check_topic "${health_topic}" aws_sns_topic_policy.us_east_1_health ""
 
-#endregion --- [ Topics ] ----------------------------------------------------------------------- #
+#endregion --- [ Topics ] ---------------------------------------------------------------------- #
 
 
-#region ------ [ Subscriptions ] ---------------------------------------------------------------- #
+#region ------ [ Subscriptions ] --------------------------------------------------------------- #
 
 # Addresses are compared as sets and reported as counts. The configured list is the sensitive
 # output, read here and never echoed. The framework subscribes by email only, so a subscription
@@ -153,10 +153,10 @@ check_subscriptions() {
 check_subscriptions "${alert_topic}"
 check_subscriptions "${health_topic}"
 
-#endregion --- [ Subscriptions ] ---------------------------------------------------------------- #
+#endregion --- [ Subscriptions ] --------------------------------------------------------------- #
 
 
-#region ------ [ Alarms ] ----------------------------------------------------------------------- #
+#region ------ [ Alarms ] ---------------------------------------------------------------------- #
 
 alarm_list="$(expect -r '(.values.outputs.health_alarms.value // [])
   | if type == "array" then .[] else error("health_alarms is not a list") end')"
@@ -197,7 +197,7 @@ for name in "${alarm_names[@]}"; do
   echo "alarm ${name}: as applied, ${state_value}"
 done
 
-#endregion --- [ Alarms ] ----------------------------------------------------------------------- #
+#endregion --- [ Alarms ] ---------------------------------------------------------------------- #
 
 if [ "${failed}" -ne 0 ]; then
   echo "::error::The deployed monitoring does not match what Terraform applied." >&2
