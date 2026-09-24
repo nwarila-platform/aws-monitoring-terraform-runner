@@ -1,0 +1,291 @@
+{
+  "cloudwatch describe-alarms": {
+    "CompositeAlarms": [],
+    "MetricAlarms": [
+      {
+        "ActionsEnabled": true,
+        "AlarmActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-cloudtrail-failed-invocations",
+        "AlarmName": "security-change-alerts-cloudtrail-failed-invocations",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "DatapointsToAlarm": 1,
+        "Dimensions": [
+          {
+            "Name": "RuleName",
+            "Value": "security-change-alerts-cloudtrail"
+          }
+        ],
+        "EvaluationPeriods": 1,
+        "InsufficientDataActions": [],
+        "MetricName": "FailedInvocations",
+        "Namespace": "AWS/Events",
+        "OKActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "Period": 300,
+        "StateValue": "OK",
+        "Statistic": "Sum",
+        "Threshold": 1.0,
+        "TreatMissingData": "notBreaching"
+      },
+      {
+        "ActionsEnabled": true,
+        "AlarmActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-iam-failed-invocations",
+        "AlarmName": "security-change-alerts-iam-failed-invocations",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "DatapointsToAlarm": 1,
+        "Dimensions": [
+          {
+            "Name": "RuleName",
+            "Value": "security-change-alerts-iam"
+          }
+        ],
+        "EvaluationPeriods": 1,
+        "InsufficientDataActions": [],
+        "MetricName": "FailedInvocations",
+        "Namespace": "AWS/Events",
+        "OKActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "Period": 300,
+        "StateValue": "OK",
+        "Statistic": "Sum",
+        "Threshold": 1.0,
+        "TreatMissingData": "notBreaching"
+      },
+      {
+        "ActionsEnabled": true,
+        "AlarmActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-security-group-failed-invocations",
+        "AlarmName": "security-change-alerts-security-group-failed-invocations",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "DatapointsToAlarm": 1,
+        "Dimensions": [
+          {
+            "Name": "RuleName",
+            "Value": "security-change-alerts-security-group"
+          }
+        ],
+        "EvaluationPeriods": 1,
+        "InsufficientDataActions": [],
+        "MetricName": "FailedInvocations",
+        "Namespace": "AWS/Events",
+        "OKActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "Period": 300,
+        "StateValue": "OK",
+        "Statistic": "Sum",
+        "Threshold": 1.0,
+        "TreatMissingData": "notBreaching"
+      },
+      {
+        "ActionsEnabled": true,
+        "AlarmActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-notification-failures",
+        "AlarmName": "security-change-alerts-notification-failures",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "DatapointsToAlarm": 1,
+        "Dimensions": [
+          {
+            "Name": "TopicName",
+            "Value": "security-change-alerts"
+          }
+        ],
+        "EvaluationPeriods": 1,
+        "InsufficientDataActions": [],
+        "MetricName": "NumberOfNotificationsFailed",
+        "Namespace": "AWS/SNS",
+        "OKActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "Period": 300,
+        "StateValue": "OK",
+        "Statistic": "Sum",
+        "Threshold": 1.0,
+        "TreatMissingData": "notBreaching"
+      },
+      {
+        "ActionsEnabled": true,
+        "AlarmActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "AlarmArn": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-undelivered",
+        "AlarmName": "security-change-alerts-undelivered",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "DatapointsToAlarm": 1,
+        "Dimensions": [
+          {
+            "Name": "QueueName",
+            "Value": "security-change-alerts-dlq"
+          }
+        ],
+        "EvaluationPeriods": 1,
+        "InsufficientDataActions": [],
+        "MetricName": "ApproximateNumberOfMessagesVisible",
+        "Namespace": "AWS/SQS",
+        "OKActions": [
+          "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+        ],
+        "Period": 300,
+        "StateValue": "OK",
+        "Statistic": "Maximum",
+        "Threshold": 1.0,
+        "TreatMissingData": "notBreaching"
+      }
+    ]
+  },
+  "events describe-rule security-change-alerts-cloudtrail": {
+    "Arn": "arn:aws:events:us-east-1:123456789012:rule/security-change-alerts-cloudtrail",
+    "EventBusName": "default",
+    "EventPattern": "{}",
+    "Name": "security-change-alerts-cloudtrail",
+    "State": "ENABLED"
+  },
+  "events describe-rule security-change-alerts-iam": {
+    "Arn": "arn:aws:events:us-east-1:123456789012:rule/security-change-alerts-iam",
+    "EventBusName": "default",
+    "EventPattern": "{}",
+    "Name": "security-change-alerts-iam",
+    "State": "ENABLED"
+  },
+  "events describe-rule security-change-alerts-security-group": {
+    "Arn": "arn:aws:events:us-east-1:123456789012:rule/security-change-alerts-security-group",
+    "EventBusName": "default",
+    "EventPattern": "{}",
+    "Name": "security-change-alerts-security-group",
+    "State": "ENABLED"
+  },
+  "events list-targets-by-rule security-change-alerts-cloudtrail": {
+    "Targets": [
+      {
+        "Arn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts",
+        "DeadLetterConfig": {
+          "Arn": "arn:aws:sqs:us-east-1:123456789012:security-change-alerts-dlq"
+        },
+        "Id": "security-change-alerts",
+        "InputTransformer": {
+          "InputPathsMap": {
+            "account": "$.account",
+            "eventName": "$.detail.eventName",
+            "region": "$.region",
+            "time": "$.time"
+          },
+          "InputTemplate": "{\n  \"alert\": \"CloudTrail changed\",\n  \"account\": <account>,\n  \"region\": <region>,\n  \"action\": <eventName>,\n  \"time\": <time>,\n  \"rule\": \"security-change-alerts-cloudtrail\",\n  \"event\": <aws.events.event.json>\n}\n"
+        },
+        "RetryPolicy": {
+          "MaximumEventAgeInSeconds": 3600,
+          "MaximumRetryAttempts": 20
+        }
+      }
+    ]
+  },
+  "events list-targets-by-rule security-change-alerts-iam": {
+    "Targets": [
+      {
+        "Arn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts",
+        "DeadLetterConfig": {
+          "Arn": "arn:aws:sqs:us-east-1:123456789012:security-change-alerts-dlq"
+        },
+        "Id": "security-change-alerts",
+        "InputTransformer": {
+          "InputPathsMap": {
+            "account": "$.account",
+            "eventName": "$.detail.eventName",
+            "region": "$.region",
+            "time": "$.time"
+          },
+          "InputTemplate": "{\n  \"alert\": \"IAM permissions changed\",\n  \"account\": <account>,\n  \"region\": <region>,\n  \"action\": <eventName>,\n  \"time\": <time>,\n  \"rule\": \"security-change-alerts-iam\",\n  \"event\": <aws.events.event.json>\n}\n"
+        },
+        "RetryPolicy": {
+          "MaximumEventAgeInSeconds": 3600,
+          "MaximumRetryAttempts": 20
+        }
+      }
+    ]
+  },
+  "events list-targets-by-rule security-change-alerts-security-group": {
+    "Targets": [
+      {
+        "Arn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts",
+        "DeadLetterConfig": {
+          "Arn": "arn:aws:sqs:us-east-1:123456789012:security-change-alerts-dlq"
+        },
+        "Id": "security-change-alerts",
+        "InputTransformer": {
+          "InputPathsMap": {
+            "account": "$.account",
+            "eventName": "$.detail.eventName",
+            "region": "$.region",
+            "time": "$.time"
+          },
+          "InputTemplate": "{\n  \"alert\": \"Security group changed\",\n  \"account\": <account>,\n  \"region\": <region>,\n  \"action\": <eventName>,\n  \"time\": <time>,\n  \"rule\": \"security-change-alerts-security-group\",\n  \"event\": <aws.events.event.json>\n}\n"
+        },
+        "RetryPolicy": {
+          "MaximumEventAgeInSeconds": 3600,
+          "MaximumRetryAttempts": 20
+        }
+      }
+    ]
+  },
+  "sns get-topic-attributes arn:aws:sns:us-east-1:123456789012:security-change-alerts": {
+    "Attributes": {
+      "DisplayName": "AWS security change alerts",
+      "KmsMasterKeyId": "12345678-1234-1234-1234-123456789012",
+      "Policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"EventBridgePublishesChangeAlerts\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"events.amazonaws.com\"},\"Action\":\"sns:Publish\",\"Resource\":\"arn:aws:sns:us-east-1:123456789012:security-change-alerts\"}]}",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts"
+    }
+  },
+  "sns get-topic-attributes arn:aws:sns:us-east-1:123456789012:security-change-alerts-health": {
+    "Attributes": {
+      "DisplayName": "AWS security alert channel health",
+      "Policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"CloudWatchPublishesAlarms\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"cloudwatch.amazonaws.com\"},\"Action\":\"sns:Publish\",\"Resource\":\"arn:aws:sns:us-east-1:123456789012:security-change-alerts-health\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":[\"arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-cloudtrail-failed-invocations\",\"arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-iam-failed-invocations\",\"arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-security-group-failed-invocations\",\"arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-notification-failures\",\"arn:aws:cloudwatch:us-east-1:123456789012:alarm:security-change-alerts-undelivered\"]}}}]}",
+      "TopicArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+    }
+  },
+  "sns list-subscriptions-by-topic arn:aws:sns:us-east-1:123456789012:security-change-alerts": {
+    "Subscriptions": [
+      {
+        "Endpoint": "oncall@example.com",
+        "Owner": "123456789012",
+        "Protocol": "email",
+        "SubscriptionArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts:00000000-0000-0000-0000-000000000000",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts"
+      },
+      {
+        "Endpoint": "security@example.com",
+        "Owner": "123456789012",
+        "Protocol": "email",
+        "SubscriptionArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts:00000001-0000-0000-0000-000000000000",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts"
+      }
+    ]
+  },
+  "sns list-subscriptions-by-topic arn:aws:sns:us-east-1:123456789012:security-change-alerts-health": {
+    "Subscriptions": [
+      {
+        "Endpoint": "oncall@example.com",
+        "Owner": "123456789012",
+        "Protocol": "email",
+        "SubscriptionArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health:00000000-0000-0000-0000-000000000000",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+      },
+      {
+        "Endpoint": "security@example.com",
+        "Owner": "123456789012",
+        "Protocol": "email",
+        "SubscriptionArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health:00000001-0000-0000-0000-000000000000",
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:security-change-alerts-health"
+      }
+    ]
+  }
+}

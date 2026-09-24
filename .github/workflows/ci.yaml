@@ -39,10 +39,6 @@ jobs:
           ACTIONLINT_VERSION: "1.7.12"
           # renovate: datasource=npm depName=markdownlint-cli2
           MARKDOWNLINT_CLI2_VERSION: "0.22.1"
-          # renovate: datasource=github-releases depName=terraform-linters/tflint extractVersion=^v(?<version>.*)$
-          TFLINT_VERSION: "0.62.0"
-          # renovate: datasource=github-releases depName=terraform-docs/terraform-docs extractVersion=^v(?<version>.*)$
-          TERRAFORM_DOCS_VERSION: "0.23.0"
         run: bash tools/install_ci_tools.sh
 
       - name: Run local CI gates

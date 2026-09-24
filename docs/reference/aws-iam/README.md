@@ -1,13 +1,17 @@
 # AWS IAM for approval
 
-> **Status: proposed, awaiting owner approval. Nothing in this directory has been applied.**
-> Once applied, these documents are replaced by an export from the account, so that they describe
-> what is deployed rather than what was intended.
+> **Status: applied.** The role and seven of its policies were created on 2026-09-16 and the
+> `…_runner_iam` policy on 2026-09-22. On 2026-09-24 the trust document and all eight policies
+> here equalled the account's export of them, with the account and repository ids replaced by
+> placeholders, and the role carried no inline policy. The account control is written but **not
+> attached**, pending the owner's decision recorded in [`manifest.json`](manifest.json). A change
+> here is a proposal until it is applied and this status says so.
 
-Everything the deploy workflow needs in AWS, and one account control the alerts rely on. Two values
-are placeholders: `<account-id>`, and `<repository-id>`, the numeric id of this repository.
-[`manifest.json`](manifest.json) lists every document and where each one is attached; the apply
-commands below read it, so a document cannot be written here and then forgotten at apply time.
+Everything the deploy workflow needs in AWS, and one account control the alerts rely on. Two
+values are placeholders: `<account-id>`, and `<repository-id>`, the numeric id of this repository.
+[`manifest.json`](manifest.json) lists every document and where each one is attached; the
+reconciliation commands below read it, so a document cannot be written here and then forgotten at
+apply time.
 
 ## The role
 
@@ -23,8 +27,8 @@ workflow. A branch, a fork, or another workflow cannot assume it. No inline poli
 
 | Policy | Grants | Bounded by |
 |---|---|---|
-| `…_cloudtrail` | Read every trail; create and manage one trail | Reads take no resource. Creation needs the `RepositoryId` request tag; management is the one trail ARN `management-events` |
-| `…_cloudwatch` | Create, update, tag and delete alarms; read alarm state | Alarm names `security-change-alerts-*`; creation by request tag, changes by resource tag. `DescribeAlarms` takes no resource |
+| `…_cloudtrail` | Read every trail; create and manage one trail | `DescribeTrails` and `ListTrails` take no resource; `GetTrailStatus` and `GetEventSelectors` are granted on `*` because the framework's trail check inspects every trail. Creation needs the `RepositoryId` request tag; management is the one trail ARN `management-events` |
+| `…_cloudwatch` | Create, update, tag and delete alarms; read alarm state | Alarm names `security-change-alerts-*`; creation by request tag, changes by resource tag. `DescribeAlarms` is granted on `*` today; the framework reads alarms by name, so a pending change narrows it to `alarm:security-change-alerts-*` |
 | `…_iam` | Read this role's own definition | The one role ARN. The framework asks IAM for the deploying role's real ARN, path included, to name it in the KMS key policy |
 | `…_events` | Create, update, target, tag and delete rules; test patterns | Rule names `security-change-alerts-*`; creation by request tag, changes by resource tag. `TestEventPattern` takes no resource |
 | `…_kms` | Create, manage, alias and schedule deletion of one key | Creation by request tag, because a new key has no ARN; changes by resource tag; the alias is the one name |
@@ -59,7 +63,11 @@ elsewhere, such as Global Accelerator in `us-west-2`, are blocked. **This is not
 protection:** the root user, and any principal created later without the policy, are not bound by
 it. Moving workloads out of the management account is AWS's recommended fix and is out of scope.
 
-## Applying after approval
+## Reconciling the account with these documents
+
+After a change here is approved, the account is brought to match the documents: the trust
+document is rewritten, and each attached policy gains a new default version. The commands are
+read from [`manifest.json`](manifest.json), so a document left out of it is never applied.
 
 ```sh
 account_id=<account-id>
@@ -68,16 +76,17 @@ role=nwarila-platform_aws-monitoring-terraform-runner_runner
 
 sub() { sed "s/<account-id>/${account_id}/g; s/<repository-id>/${repository_id}/g" "$1"; }
 
-aws iam create-role --role-name "${role}" \
-  --assume-role-policy-document "$(sub "roles/${role}.trust.json")"
+aws iam update-assume-role-policy --role-name "${role}" \
+  --policy-document "$(sub "roles/${role}.trust.json")"
 
 jq -r --arg role "${role}" '.roles[$role].attached[]' manifest.json | while read -r document; do
   name="$(basename "${document}" .json)"
-  arn="$(aws iam create-policy --policy-name "${name}" \
-    --policy-document "$(sub "${document}")" --query Policy.Arn --output text)"
-  aws iam attach-role-policy --role-name "${role}" --policy-arn "${arn}"
+  arn="arn:aws:iam::${account_id}:policy/${name}"
+  aws iam create-policy-version --policy-arn "${arn}" --set-as-default \
+    --policy-document "$(sub "${document}")"
 done
 ```
 
-Then set the repository secret `AWS_ACCOUNT_ID`, and attach the account control as listed in
-[`manifest.json`](manifest.json).
+A policy has at most five versions; delete the oldest non-default version first when a fifth
+exists. Then export the role and its policies again and confirm the export equals these
+documents, and update the status above with the date.

@@ -1,6 +1,6 @@
 # The organization account's monitoring deployment. Deployment identity (repository,
-# repository_id, commit_sha, run_id) is NOT set here: the deploy workflow passes it as command-line
-# -var arguments, which outrank every value file.
+# repository_id, commit_sha, run_id) is NOT set here: the deploy workflow passes it as
+# command-line -var arguments, which outrank every value file.
 
 # The alerts protect the real account.
 environment = "prod"
@@ -16,10 +16,11 @@ environment = "prod"
 manage_trail = true
 
 # This account has no key-approval process, so the framework creates and owns the key that
-# encrypts the alert topics.
+# encrypts the alert topic.
 alert_key_alias = null
 
 # The deploy pipelines whose security-group churn is not emailed. Every one of them assumes a role
-# named nwarila-platform_<repository>_runner, so one pattern covers the fleet, including repositories
-# added later. Their IAM changes still alert, and so does every change made by a person.
+# named nwarila-platform_<repository>_runner, so one pattern covers the fleet, including
+# repositories added later. Their IAM changes still alert, and so does every change made by a
+# person.
 exempt_pipeline_roles = ["nwarila-platform_*_runner"]

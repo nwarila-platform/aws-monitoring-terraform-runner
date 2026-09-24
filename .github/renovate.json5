@@ -1,0 +1,89 @@
+{
+  // Schema for editor validation. Update only when intentionally adopting a new schema.
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  // Renovate config for NWarila/terraform-framework-template and (after sync) every
+  // consumer. Universal across the fleet so that the same Renovate behavior
+  // applies in every Terraform repository under nwarila and nwarila-platform.
+  //
+  // Rules in this file:
+  //   - Pin third-party GitHub Actions to commit SHAs.
+  //   - Pin Terraform and provider versions exactly per the framework-template contract.
+  //   - Track explicit `# renovate:` annotations in workflow comments for
+  //     tool versions (Terraform CLI, TFLint, terraform-docs, zizmor).
+
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    "schedule:weekly"
+  ],
+
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+
+  "ignorePaths": [".github/workflows/workflow-containers.yaml"],
+
+  "enabledManagers": [
+    "github-actions",
+    "terraform",
+    "pip_requirements",
+    "custom.regex"
+  ],
+
+  "customManagers": [
+    {
+      // Match `# renovate: datasource=...` annotations followed by a
+      // value: "..." or value: '...' assignment. Catches Terraform/TFLint/
+      // terraform-docs/zizmor versions in workflow inputs and shell
+      // scripts, plus current-branch digests in source-ref, template_ref and
+      // reusable-workflow uses: inputs.
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.*\\.ya?ml$/",
+        "/^tools/.*\\.sh$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: packageName=(?<packageName>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?\\s+\\w+(?:_VERSION)?:\\s*\"(?<currentValue>[^\"]+)\"",
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: packageName=(?<packageName>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?\\s+\\w+_VERSION=\"(?<currentValue>[^\"]+)\"",
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: packageName=(?<packageName>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?\\s+pip install --no-cache-dir (?<depName2>[a-zA-Z0-9-._]+)==(?<currentValue>[^\\s]+)",
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?) packageName=(?<packageName>[^\\s]+?) currentValue=(?<currentValue>[^\\s]+?)\\s+source-ref:\\s*(?<currentDigest>[a-f0-9]{40})"
+      ]
+    }
+  ],
+
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "matchManagers": ["terraform"],
+      "rangeStrategy": "pin",
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "matchDepNames": ["hashicorp/terraform"],
+      "groupName": "Terraform CLI",
+      "semanticCommitType": "deps",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "matchDepNames": [
+        "NWarila/.github",
+        "NWarila/drift-gate",
+        "NWarila/terraform-framework-template",
+        "nwarila-platform/.github"
+      ],
+      "groupName": "first-party workflow pins",
+      "groupSingleUpdates": true,
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "deps",
+      "automerge": false
+    }
+  ]
+}

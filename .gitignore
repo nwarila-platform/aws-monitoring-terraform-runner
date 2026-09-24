@@ -14,6 +14,7 @@
 # GitHub configuration
 !/.github/
 !/.github/CODEOWNERS
+!/.github/renovate.json5
 !/.github/terraform-framework-pin
 !/.github/workflows/
 !/.github/workflows/aws-deploy.yaml
@@ -41,3 +42,8 @@
 # Tools
 !/tools/
 !/tools/install_ci_tools.sh
+!/tools/test_verify_deployment.sh
+!/tools/verify_deployment.sh
+!/tools/fixtures/
+!/tools/fixtures/verify/
+!/tools/fixtures/verify/*.json

@@ -2,15 +2,14 @@
 # deploy workflow makes are excluded, because neither is ever a deliverable.
 GUARD_EXCLUDE := ^(\.tmp/|\.frameworks/)
 
-.PHONY: fmt fmt-check lint iam-check pin-check allowlist-check ci
+.PHONY: fmt fmt-check lint iam-check pin-check verify-test allowlist-check ci
 
-# Mutating: the value file is HCL, and fmt only reads it from stdin under this name.
+# Mutating: rewrites the value file in place.
 fmt:
-	@formatted=$$(terraform fmt - < terraform/prod.tfvars) && \
-	printf '%s\n' "$$formatted" > terraform/prod.tfvars
+	terraform fmt terraform/prod.tfvars
 
 fmt-check:
-	@terraform fmt -check - < terraform/prod.tfvars > /dev/null || \
+	@terraform fmt -check terraform/prod.tfvars > /dev/null || \
 	{ echo "terraform/prod.tfvars is not fmt-clean; run 'make fmt'"; exit 1; }
 	@# Against the empty tree, so every file is checked rather than only uncommitted changes.
 	@# Markdown keeps trailing spaces as hard breaks; the markdownlint config is a byte-identical
@@ -41,6 +40,11 @@ pin-check:
 	{ echo ".github/terraform-framework-pin must hold exactly one 40-character SHA"; exit 1; }
 	@printf 'pin-check: OK\n'
 
+# The read-back decides whether a deploy is accepted and whether a scheduled check fails, so its
+# decisions are proven offline against fixture responses.
+verify-test:
+	bash tools/test_verify_deployment.sh
+
 allowlist-check:
 	@ignored=$$(git ls-files --others --ignored --exclude-standard -- . 2>/dev/null \
 	  | grep -vE '$(GUARD_EXCLUDE)' || true); \
@@ -63,4 +67,5 @@ ci:
 	$(MAKE) lint
 	$(MAKE) iam-check
 	$(MAKE) pin-check
+	$(MAKE) verify-test
 	$(MAKE) allowlist-check
