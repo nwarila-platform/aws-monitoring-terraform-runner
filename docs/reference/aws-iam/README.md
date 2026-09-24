@@ -1,8 +1,9 @@
 # AWS IAM for approval
 
 > **Status: applied.** The role and seven of its policies were created on 2026-09-16 and the
-> `…_runner_iam` policy on 2026-09-22, each from the document here at the time, with the account
-> and repository ids replaced by placeholders. The account control is written but **not
+> `…_runner_iam` policy on 2026-09-22. On 2026-09-24 the trust document and all eight policies
+> here equalled the account's export of them, with the account and repository ids replaced by
+> placeholders, and the role carried no inline policy. The account control is written but **not
 > attached**, pending the owner's decision recorded in [`manifest.json`](manifest.json). A change
 > here is a proposal until it is applied and this status says so.
 
