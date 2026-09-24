@@ -2,6 +2,7 @@
   "controls": {
     "nwarila-platform_us-east-1-only": {
       "attach_to": [
+        "the github_nwarila-platform IAM Identity Center permission set, as an inline policy",
         "every nwarila-platform_*_runner role in the account"
       ],
       "document": "controls/nwarila-platform_us-east-1-only.json",

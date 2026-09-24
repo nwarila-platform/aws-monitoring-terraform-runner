@@ -46,6 +46,11 @@ health_topic="$(expect -r '.values.outputs.health_topic_arn.value')"
 
 #region ------ [ Rules and targets ] ------------------------------------------------------------ #
 
+# Read into a variable, not a process substitution, so a failed read stops the script; and a
+# state with no rules is refused, because checking nothing is not a pass.
+rules="$(expect '(.values.outputs.alert_rules.value // {}) | to_entries[] | { key: .key, name: .value.name }')"
+[ -n "${rules}" ] || { echo "::error::The applied state lists no alert rules; there is nothing to verify." >&2; exit 1; }
+
 while read -r rule; do
   name="$(printf '%s' "${rule}" | jq -r .name)"
   key="$(printf '%s' "${rule}" | jq -r .key)"
@@ -73,7 +78,7 @@ while read -r rule; do
     continue
   fi
   echo "rule ${name}: ENABLED on the default bus, one target as applied"
-done < <(expect '.values.outputs.alert_rules.value | to_entries[] | { key: .key, name: .value.name }')
+done <<< "${rules}"
 
 #endregion --- [ Rules and targets ] ------------------------------------------------------------ #
 
@@ -109,19 +114,19 @@ check_topic "${health_topic}" aws_sns_topic_policy.us_east_1_health ""
 #region ------ [ Subscriptions ] ---------------------------------------------------------------- #
 
 # Addresses are compared as sets and reported as counts. The configured list is the sensitive
-# output, read here and never echoed.
+# output, read here and never echoed. The framework subscribes by email only, so a subscription
+# of any other protocol is extra: it would receive every alert and nothing here created it.
 configured="$(expect '.values.outputs.alert_subscriptions.value | keys')"
 
 check_subscriptions() {
   local arn="$1" subscriptions missing extra pending
-  subscriptions="$(live sns list-subscriptions-by-topic --topic-arn "${arn}" \
-    | jq -c '[.Subscriptions[] | select(.Protocol == "email")]')"
+  subscriptions="$(live sns list-subscriptions-by-topic --topic-arn "${arn}" | jq -c '.Subscriptions')"
   missing="$(jq -n --argjson want "${configured}" --argjson have "${subscriptions}" \
-    '$want - [$have[].Endpoint] | length')"
+    '$want - [$have[] | select(.Protocol == "email") | .Endpoint] | length')"
   extra="$(jq -n --argjson want "${configured}" --argjson have "${subscriptions}" \
-    '[$have[].Endpoint] - $want | length')"
+    '[$have[] | select(.Protocol != "email" or (.Endpoint | IN($want[]) | not))] | length')"
   pending="$(jq -n --argjson want "${configured}" --argjson have "${subscriptions}" \
-    '[$have[] | select(.SubscriptionArn == "PendingConfirmation" and (.Endpoint | IN($want[])))] | length')"
+    '[$have[] | select(.Protocol == "email" and .SubscriptionArn == "PendingConfirmation" and (.Endpoint | IN($want[])))] | length')"
   echo "topic ${arn##*:}: $(jq -n --argjson w "${configured}" '$w | length') configured, ${missing} missing, ${pending} pending, ${extra} extra"
 
   if [ "${missing}" -gt 0 ]; then
@@ -151,13 +156,16 @@ check_subscriptions "${health_topic}"
 
 #region ------ [ Alarms ] ----------------------------------------------------------------------- #
 
-mapfile -t alarm_names < <(expect -r '.values.outputs.health_alarms.value[]')
+alarm_list="$(expect -r '(.values.outputs.health_alarms.value // [])[]')"
+[ -n "${alarm_list}" ] || { echo "::error::The applied state lists no health alarms; there is nothing to verify." >&2; exit 1; }
+mapfile -t alarm_names <<< "${alarm_list}"
 alarms="$(live cloudwatch describe-alarms --alarm-names "${alarm_names[@]}")"
 
 for name in "${alarm_names[@]}"; do
   actual="$(printf '%s' "${alarms}" | jq -c --arg name "${name}" "${canon}"'[.MetricAlarms[] | select(.AlarmName == $name)]
     | if length == 0 then empty else .[0]
     | { enabled: .ActionsEnabled, alarm_actions: .AlarmActions, ok_actions: .OKActions,
+        insufficient_data_actions: (.InsufficientDataActions // []),
         metric: .MetricName, namespace: .Namespace,
         dimensions: (.Dimensions | map({ key: .Name, value: .Value }) | from_entries),
         statistic: .Statistic, period: .Period, threshold: .Threshold,
@@ -170,6 +178,7 @@ for name in "${alarm_names[@]}"; do
   expected="$(expect --arg name "${name}" "${canon}"'.values.root_module.resources[]
     | select(.type == "aws_cloudwatch_metric_alarm" and .values.alarm_name == $name) | .values
     | { enabled: .actions_enabled, alarm_actions, ok_actions,
+        insufficient_data_actions: (.insufficient_data_actions // []),
         metric: .metric_name, namespace, dimensions,
         statistic, period, threshold, comparison: .comparison_operator,
         evaluation_periods, datapoints: .datapoints_to_alarm, missing_data: .treat_missing_data } | canon')"

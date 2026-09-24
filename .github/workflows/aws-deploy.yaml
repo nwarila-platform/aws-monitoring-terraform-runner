@@ -261,9 +261,12 @@ jobs:
       - name: Verify the deployed monitoring against AWS
         env:
           MODE: ${{ github.event_name == 'schedule' && 'strict' || 'post-apply' }}
+        # The summary is written whatever the outcome, since a failed read-back is the one a
+        # person most needs to read; the step then exits with the verifier's own status.
         run: |
-          set -euo pipefail
-          bash tools/verify_deployment.sh "${FRAMEWORK}/terraform" "${MODE}" | tee verify.log
+          set -uo pipefail
+          bash tools/verify_deployment.sh "${FRAMEWORK}/terraform" "${MODE}" 2>&1 | tee verify.log
+          status="${PIPESTATUS[0]}"
           {
             echo "## Deployment read back (${MODE})"
             echo
@@ -271,3 +274,4 @@ jobs:
             cat verify.log
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
+          exit "${status}"

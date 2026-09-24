@@ -251,6 +251,7 @@
               "RuleName": "security-change-alerts-cloudtrail"
             },
             "evaluation_periods": 1,
+            "insufficient_data_actions": [],
             "metric_name": "FailedInvocations",
             "namespace": "AWS/Events",
             "ok_actions": [
@@ -280,6 +281,7 @@
               "RuleName": "security-change-alerts-iam"
             },
             "evaluation_periods": 1,
+            "insufficient_data_actions": [],
             "metric_name": "FailedInvocations",
             "namespace": "AWS/Events",
             "ok_actions": [
@@ -309,6 +311,7 @@
               "RuleName": "security-change-alerts-security-group"
             },
             "evaluation_periods": 1,
+            "insufficient_data_actions": [],
             "metric_name": "FailedInvocations",
             "namespace": "AWS/Events",
             "ok_actions": [
@@ -337,6 +340,7 @@
               "TopicName": "security-change-alerts"
             },
             "evaluation_periods": 1,
+            "insufficient_data_actions": [],
             "metric_name": "NumberOfNotificationsFailed",
             "namespace": "AWS/SNS",
             "ok_actions": [
@@ -365,6 +369,7 @@
               "QueueName": "security-change-alerts-dlq"
             },
             "evaluation_periods": 1,
+            "insufficient_data_actions": [],
             "metric_name": "ApproximateNumberOfMessagesVisible",
             "namespace": "AWS/SQS",
             "ok_actions": [

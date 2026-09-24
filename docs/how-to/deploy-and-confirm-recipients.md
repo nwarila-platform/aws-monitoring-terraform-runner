@@ -21,12 +21,14 @@ Two things leave a subscription pending, and they end differently:
 
 - **Unconfirmed.** SNS deletes a subscription nobody confirmed after 48 hours. While it exists,
   re-running the deploy sends nothing, because Terraform reads it as already present. To have the
-  confirmation email sent again, subscribe the same address once more, and the next deploy adopts
-  it:
+  confirmation emails sent again, subscribe the same address to both topics once more, and the
+  next deploy adopts them:
 
   ```sh
-  aws sns subscribe --region us-east-1 --protocol email --notification-endpoint <address> \
-    --topic-arn "$(terraform -chdir=<framework>/terraform output -raw alert_topic_arn)"
+  for output in alert_topic_arn health_topic_arn; do
+    aws sns subscribe --region us-east-1 --protocol email --notification-endpoint <address> \
+      --topic-arn "$(terraform -chdir=<framework>/terraform output -raw "${output}")"
+  done
   ```
 
 - **Suspended.** A topic that publishes more than ten messages a second has its email
@@ -55,7 +57,7 @@ the alert topic's `NumberOfNotificationsFailed` is zero.
 
 Recipients are not in this repository. It is public, so the list lives in the `ALERT_EMAILS`
 repository secret and reaches Terraform as a command-line `-var`, which outranks every value
-file. Set it as an HCL list:
+file. Set it as a JSON array of addresses:
 
 ```sh
 gh secret set ALERT_EMAILS -R nwarila-platform/aws-monitoring-terraform-runner \

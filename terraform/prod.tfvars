@@ -16,7 +16,7 @@ environment = "prod"
 manage_trail = true
 
 # This account has no key-approval process, so the framework creates and owns the key that
-# encrypts the alert topics.
+# encrypts the alert topic.
 alert_key_alias = null
 
 # The deploy pipelines whose security-group churn is not emailed. Every one of them assumes a role

@@ -39,11 +39,12 @@ SHIM
 chmod +x "${work}/bin/terraform" "${work}/bin/aws"
 
 # case <name> <mode> <expected exit> <required output text> <jq edit of aws-responses.json | ->
+#       [jq edit of terraform-show.json]
 case_() {
-  local name="$1" mode="$2" want_exit="$3" want_text="$4" edit="$5" output got_exit
-  local dir="${work}/${name}"
+  local name="$1" mode="$2" want_exit="$3" want_text="$4" edit="$5" state_edit="${6:-.}" output got_exit
+  local dir="${work}/${name}-${mode}"
   mkdir -p "${dir}"
-  cp "${tools_dir}/fixtures/verify/terraform-show.json" "${dir}/"
+  jq "${state_edit}" "${tools_dir}/fixtures/verify/terraform-show.json" > "${dir}/terraform-show.json"
   if [ "${edit}" = "-" ]; then
     cp "${tools_dir}/fixtures/verify/aws-responses.json" "${dir}/"
   else
@@ -71,7 +72,7 @@ case_ healthy post-apply 0 'verify_deployment (post-apply): OK' -
 # A recipient who has not followed the confirmation link: a first deploy's normal state, a
 # scheduled check's failure.
 pending='.["sns list-subscriptions-by-topic '"${health}"'"].Subscriptions[0].SubscriptionArn = "PendingConfirmation"'
-case_ pending_recipient post-apply 0 '1 pending' "${pending}"
+case_ pending_recipient post-apply 0 'recipient(s) pending confirmation; each must follow' "${pending}"
 case_ pending_recipient strict 1 '1 recipient(s) still pending' "${pending}"
 # A configured address with no subscription at all receives nothing, whichever mode.
 missing='.["sns list-subscriptions-by-topic '"${alert}"'"].Subscriptions |= .[1:]'
@@ -79,12 +80,24 @@ case_ missing_recipient post-apply 1 '1 missing' "${missing}"
 case_ missing_recipient strict 1 '1 missing' "${missing}"
 # A subscription the configuration does not name: a removed address SNS has not yet deleted.
 extra='.["sns list-subscriptions-by-topic '"${alert}"'"].Subscriptions += [{"SubscriptionArn":"PendingConfirmation","Protocol":"email","Endpoint":"former@example.com"}]'
-case_ extra_subscription post-apply 0 '1 extra' "${extra}"
+case_ extra_subscription post-apply 0 'a removed address stays pending' "${extra}"
 case_ extra_subscription strict 1 'not in the configured list' "${extra}"
 # An alarm in ALARM is a channel that is failing now; only the scheduled check treats it as such.
 alarm='(.["cloudwatch describe-alarms"].MetricAlarms[] | select(.AlarmName == "security-change-alerts-undelivered") | .StateValue) = "ALARM"'
 case_ alarm_in_alarm post-apply 0 'as applied, ALARM' "${alarm}"
 case_ alarm_in_alarm strict 1 'is in ALARM' "${alarm}"
+# A new alarm has no data yet; only ALARM is a failing channel.
+case_ alarm_insufficient_data strict 0 'as applied, INSUFFICIENT_DATA' '(.["cloudwatch describe-alarms"].MetricAlarms[] | select(.AlarmName == "security-change-alerts-undelivered") | .StateValue) = "INSUFFICIENT_DATA"'
+# A subscriber of any other protocol would receive every alert; nothing here creates one.
+siphon='.["sns list-subscriptions-by-topic '"${alert}"'"].Subscriptions += [{"SubscriptionArn":"'"${alert}"':00000009-0000-0000-0000-000000000000","Protocol":"lambda","Endpoint":"arn:aws:lambda:us-east-1:123456789012:function:elsewhere"}]'
+case_ non_email_subscription post-apply 0 '1 extra' "${siphon}"
+case_ non_email_subscription strict 1 'not in the configured list' "${siphon}"
+# A configured address subscribed under another protocol is not the email subscription it needs.
+json_protocol='.["sns list-subscriptions-by-topic '"${health}"'"].Subscriptions[0].Protocol = "email-json"'
+case_ configured_address_as_email_json strict 1 '1 missing' "${json_protocol}"
+# A state that lists nothing to check is refused, never passed.
+case_ state_without_rules strict 1 'lists no alert rules' - 'del(.values.outputs.alert_rules)'
+case_ state_without_alarms strict 1 'lists no health alarms' - '.values.outputs.health_alarms.value = []'
 case_ rule_disabled strict 1 'is not ENABLED' '.["events describe-rule security-change-alerts-iam"].State = "DISABLED"'
 case_ rule_with_two_targets strict 1 'has 2 targets' '.["events list-targets-by-rule security-change-alerts-iam"].Targets |= . + .'
 case_ target_retry_changed strict 1 "target differs" '.["events list-targets-by-rule security-change-alerts-iam"].Targets[0].RetryPolicy.MaximumEventAgeInSeconds = 86400'
@@ -99,6 +112,7 @@ case_ alarm_missing strict 1 'does not exist' '.["cloudwatch describe-alarms"].M
 case_ alarm_actions_disabled strict 1 'differs from what Terraform applied' '(.["cloudwatch describe-alarms"].MetricAlarms[] | select(.AlarmName == "security-change-alerts-iam-failed-invocations") | .ActionsEnabled) = false'
 case_ alarm_dimension_changed strict 1 'differs from what Terraform applied' '(.["cloudwatch describe-alarms"].MetricAlarms[] | select(.AlarmName == "security-change-alerts-undelivered") | .Dimensions[0].Value) = "some-other-queue"'
 case_ alarm_ok_action_removed strict 1 'differs from what Terraform applied' '(.["cloudwatch describe-alarms"].MetricAlarms[] | select(.AlarmName == "security-change-alerts-notification-failures") | .OKActions) = []'
+case_ alarm_insufficient_data_action_added strict 1 'differs from what Terraform applied' '(.["cloudwatch describe-alarms"].MetricAlarms[] | select(.AlarmName == "security-change-alerts-undelivered") | .InsufficientDataActions) = ["arn:aws:sns:us-east-1:123456789012:elsewhere"]'
 
 if [ "${failed}" -ne 0 ]; then
   echo "verify_deployment.sh does not decide every case as required" >&2
