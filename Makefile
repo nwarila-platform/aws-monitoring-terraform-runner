@@ -22,17 +22,19 @@ lint:
 	markdownlint-cli2 "README.md" "docs/**/*.md"
 
 # The IAM documents are what the owner approves, so they must parse, and the manifest the apply
-# commands read must name exactly the policy files that exist: a policy written but left out of
-# the manifest would be approved and then never attached.
+# commands read must name exactly the documents that exist: a policy, trust or control written but
+# left out of the manifest would be approved and then never applied, and one the manifest names
+# but nobody wrote would fail only at apply time.
 iam-check:
 	@for f in docs/reference/aws-iam/manifest.json docs/reference/aws-iam/*/*.json; do \
 	  jq empty "$$f" || { echo "invalid JSON: $$f"; exit 1; }; \
 	done
-	@listed=$$(jq -r '.roles[].attached[]' docs/reference/aws-iam/manifest.json | sort); \
-	present=$$(cd docs/reference/aws-iam && ls policies/*.json | sort); \
+	@listed=$$(jq -r '.roles[].attached[], .roles[].trust, .controls[].document' \
+	  docs/reference/aws-iam/manifest.json | sort); \
+	present=$$(cd docs/reference/aws-iam && ls policies/*.json roles/*.trust.json controls/*.json | sort); \
 	[ "$$listed" = "$$present" ] || { \
-	  echo "manifest.json attaches:"; echo "$$listed"; echo "policies/ holds:"; echo "$$present"; exit 1; }
-	@printf 'iam-check: OK — every document parses and the manifest attaches every policy\n'
+	  echo "manifest.json names:"; echo "$$listed"; echo "the directory holds:"; echo "$$present"; exit 1; }
+	@printf 'iam-check: OK — every document parses and the manifest names exactly the documents present\n'
 
 pin-check:
 	@pin=$$(cat .github/terraform-framework-pin); \

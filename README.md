@@ -26,6 +26,13 @@ commit changed, so no converge is a no-op plan. It:
 
 Once a day the same workflow runs the read-back alone, with no apply, in strict mode: a
 subscription lost, an alarm in ALARM, or a rule disabled since the last converge fails that run.
+A manual dispatch with `read_back_only` runs that same strict read-back on demand:
+
+```sh
+gh workflow run aws-deploy.yaml -R nwarila-platform/aws-monitoring-terraform-runner \
+  -f read_back_only=true
+```
+
 The job summary reports counts per topic, never an address.
 
 Adopting a newer framework commit is a pull request that changes the pin, checked against the

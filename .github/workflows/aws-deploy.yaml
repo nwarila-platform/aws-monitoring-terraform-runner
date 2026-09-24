@@ -3,7 +3,8 @@ name: AWS Deploy
 # Applies the pinned aws-monitoring-terraform-framework commit, with this repository's values, to
 # the organization account, then reads the deployment back from AWS. Every merge to main converges
 # it; nothing outside main can reach AWS. Once a day the read-back runs alone, with no apply, so a
-# subscription or a rule lost since the last converge is noticed within a day rather than never.
+# subscription or a rule lost since the last converge is noticed within a day rather than never; a
+# manual dispatch with read_back_only runs that same check on demand.
 
 on:
   push:
@@ -11,6 +12,11 @@ on:
   schedule:
     - cron: "17 11 * * *"
   workflow_dispatch:
+    inputs:
+      read_back_only:
+        description: Skip the converge and run the strict read-back alone, as the daily schedule does
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -39,7 +45,7 @@ jobs:
   aws-deploy:
     name: Converge monitoring
     needs: main-ref
-    if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && !inputs.read_back_only
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -52,7 +58,7 @@ jobs:
 
     steps:
       - name: Check out runner
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -70,7 +76,7 @@ jobs:
           echo "sha=${lines[0]}" >> "${GITHUB_OUTPUT}"
 
       - name: Check out aws-monitoring-terraform-framework (pinned)
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ github.repository_owner }}/aws-monitoring-terraform-framework
           ref: ${{ steps.pin.outputs.sha }}
@@ -118,7 +124,7 @@ jobs:
         run: |
           set -euo pipefail
           cp terraform/prod.tfvars "${FRAMEWORK}/terraform/terraform.tfvars"
-          terraform -chdir="${FRAMEWORK}/terraform" init -input=false          \
+          terraform -chdir="${FRAMEWORK}/terraform" init -input=false -lockfile=readonly \
             -backend-config="bucket=${AWS_ACCOUNT_ID}-terraform"               \
             -backend-config="key=${GITHUB_REPOSITORY}/terraform.tfstate"       \
             -backend-config="region=${AWS_REGION}"
@@ -190,7 +196,7 @@ jobs:
 
     steps:
       - name: Check out runner
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -206,7 +212,7 @@ jobs:
           echo "sha=${lines[0]}" >> "${GITHUB_OUTPUT}"
 
       - name: Check out aws-monitoring-terraform-framework (pinned)
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ github.repository_owner }}/aws-monitoring-terraform-framework
           ref: ${{ steps.pin.outputs.sha }}
@@ -250,7 +256,7 @@ jobs:
         run: |
           set -euo pipefail
           cp terraform/prod.tfvars "${FRAMEWORK}/terraform/terraform.tfvars"
-          terraform -chdir="${FRAMEWORK}/terraform" init -input=false          \
+          terraform -chdir="${FRAMEWORK}/terraform" init -input=false -lockfile=readonly \
             -backend-config="bucket=${AWS_ACCOUNT_ID}-terraform"               \
             -backend-config="key=${GITHUB_REPOSITORY}/terraform.tfstate"       \
             -backend-config="region=${AWS_REGION}"
@@ -260,7 +266,7 @@ jobs:
       # a recipient who has not yet followed the link, so it warns. Counts only, never an address.
       - name: Verify the deployed monitoring against AWS
         env:
-          MODE: ${{ github.event_name == 'schedule' && 'strict' || 'post-apply' }}
+          MODE: ${{ (github.event_name == 'schedule' || inputs.read_back_only) && 'strict' || 'post-apply' }}
         # The summary is written whatever the outcome, since a failed read-back is the one a
         # person most needs to read; the step then exits with the verifier's own status. GitHub
         # runs this shell with -e, so the pipeline's failure is caught here rather than ending it.
