@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       read_back_only:
-        description: Skip the converge and run the strict read-back alone, as the daily schedule does
+        description: Skip the converge; run the strict read-back alone, as the schedule does
         type: boolean
         default: false
 
@@ -261,9 +261,10 @@ jobs:
             -backend-config="key=${GITHUB_REPOSITORY}/terraform.tfstate"       \
             -backend-config="region=${AWS_REGION}"
 
-      # Strict on the schedule: a pending or extra address and an alarm in ALARM fail, because
-      # nothing else will report them. After a converge a pending address is the normal state of
-      # a recipient who has not yet followed the link, so it warns. Counts only, never an address.
+      # Strict on the schedule and on a read_back_only dispatch: a pending or extra address and an
+      # alarm in ALARM fail, because nothing else will report them. After a converge a pending
+      # address is the normal state of a recipient who has not yet followed the link, so it warns.
+      # Counts only, never an address.
       - name: Verify the deployed monitoring against AWS
         env:
           MODE: ${{ (github.event_name == 'schedule' || inputs.read_back_only) && 'strict' || 'post-apply' }}
